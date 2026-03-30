@@ -1,0 +1,88 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- ========== CHANGE THIS TO YOUR GAME INSTALL DIRECTORY ========== -->
+    <GameDir>C:\Users\Pol\Desktop\ProjectMod\factorial-omega-win-64</GameDir>
+    <!-- ================================================================ -->
+
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AppendTargetFrameworkToOutputPath>False</AppendTargetFrameworkToOutputPath>
+
+    <Il2CppAssemblies>$(GameDir)\MelonLoader\Il2CppAssemblies</Il2CppAssemblies>
+    <MelonLoaderNet6>$(GameDir)\MelonLoader\net6</MelonLoaderNet6>
+    <ModsDir>$(GameDir)\Mods</ModsDir>
+    <GameExe>My Dystopian Robot Girlfriend.exe</GameExe>
+
+    <StartAction>Program</StartAction>
+    <StartProgram>$([System.IO.Path]::GetFullPath('$(GameDir)\$(GameExe)'))</StartProgram>
+  </PropertyGroup>
+
+  <!-- Mod dependencies -->
+  <ItemGroup>
+    <Reference Include="ModSettingsMenu">
+      <HintPath>$(ModsDir)\ModSettingsMenu.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!-- MelonLoader framework references -->
+  <ItemGroup>
+    <Reference Include="MelonLoader">
+      <HintPath>$(MelonLoaderNet6)\MelonLoader.dll</HintPath>
+    </Reference>
+    <Reference Include="Il2CppInterop.Runtime">
+      <HintPath>$(MelonLoaderNet6)\Il2CppInterop.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(MelonLoaderNet6)\0Harmony.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!-- MDRG Il2Cpp assemblies -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(Il2CppAssemblies)\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Il2CppFungus">
+      <HintPath>$(Il2CppAssemblies)\Il2CppFungus.dll</HintPath>
+    </Reference>
+    <Reference Include="Il2CppGameAssembly">
+      <HintPath>$(Il2CppAssemblies)\Il2CppGameAssembly.dll</HintPath>
+    </Reference>
+    <Reference Include="Il2Cppmscorlib">
+      <HintPath>$(Il2CppAssemblies)\Il2Cppmscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(Il2CppAssemblies)\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="Il2CppIC.Utility.Runtime">
+      <HintPath>$(Il2CppAssemblies)\Il2CppIC.Utility.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(Il2CppAssemblies)\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(Il2CppAssemblies)\UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(Il2CppAssemblies)\UnityEngine.TextRenderingModule.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(Il2CppAssemblies)\Unity.TextMeshPro.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(Il2CppAssemblies)\UnityEngine.UIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(Il2CppAssemblies)\UnityEngine.ImageConversionModule.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="DeployMod" AfterTargets="Build">
+    <Delete Files="$(ModsDir)\$(TargetFileName)" ContinueOnError="true" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsDir)" />
+    <Message Importance="high" Text="Deployed $(TargetFileName) to $(ModsDir)" />
+  </Target>
+
+</Project>
