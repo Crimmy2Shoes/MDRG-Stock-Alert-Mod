@@ -24,7 +24,7 @@ Your bot monitors your portfolio in real-time and alerts you through in-game dia
 
 - [MelonLoader](https://github.com/lavagang/melonloader) (v0.7.2)
 - [ModSettingsMenu (MSM) by MrEcho ](https://github.com/Echo5Dev/MDRG-ModSettingsMenu) (v1.1.0) - for in-game configuration panel
-
+- Mods.zip and StockAlertAssets.zip from release.
 ---
 
 ## Platform Support
