@@ -22,6 +22,8 @@ namespace StockAlertMod
         private static string currentStateName = "Unknown";
         private static bool isSleeping = false;
 
+        public static bool IsSleeping => isSleeping;
+
         public static void SetSleeping(bool sleeping)
         {
             isSleeping = sleeping;
@@ -58,7 +60,6 @@ namespace StockAlertMod
     public class StockAlertMod : MelonMod
     {
         internal static float ALERT_COOLDOWN = 45f;
-        private float alertCooldown = 0f;
 
         // ---- Preferences MSM ----
         private static MelonPreferences_Category prefCategory;
@@ -96,6 +97,7 @@ namespace StockAlertMod
 
         private static void EnqueueAlert(string text, string expression = null)
         {
+            if (GameStateTracker.IsSleeping) return;
             lock (alertLock)
             {
                 int cap = prefQueueCap?.Value ?? 3;
@@ -126,7 +128,6 @@ namespace StockAlertMod
         private static readonly ConcurrentDictionary<string, float> allTimeLow = new ConcurrentDictionary<string, float>();
 
         private Il2Cpp.ModelBrain brain;
-        private bool brainLogged = false;
 
         // Website display
         private static Il2Cpp.StockWebsite _stockWebsite;
@@ -343,21 +344,14 @@ namespace StockAlertMod
 
             if (prefEnabled?.Value == false) return;
 
-            if (alertCooldown > 0f)
-            {
-                alertCooldown -= Time.deltaTime;
-                return;
-            }
+            float now = Time.realtimeSinceStartup;
+            if (now - _lastAlertRealTime < ALERT_COOLDOWN) return;
 
             if (!GameStateTracker.IsSafeToTrigger()) return;
 
             if (brain == null || brain.WasCollected)
             {
                 brain = UnityEngine.Object.FindObjectOfType<Il2Cpp.ModelBrain>();
-                if (brain != null && !brainLogged)
-                {
-                    brainLogged = true;
-                }
             }
 
             if (brain != null && !brain.WasCollected)
@@ -369,7 +363,30 @@ namespace StockAlertMod
             if (TryDequeueAlert(out string text, out string expression))
             {
                 TriggerDialog(text, expression);
-                alertCooldown = ALERT_COOLDOWN;
+                _lastAlertRealTime = now;
+            }
+        }
+
+        private static float _lastAlertRealTime = 0f;
+
+        public static void ActivateTheDialogue()
+        {
+            if (prefEnabled?.Value == false) return;
+
+            float now = Time.realtimeSinceStartup;
+            if (now - _lastAlertRealTime < ALERT_COOLDOWN) return;
+
+            var brain = UnityEngine.Object.FindObjectOfType<Il2Cpp.ModelBrain>();
+            if (brain != null && !brain.WasCollected)
+            {
+                try { if (brain.IsTalkingWithOverlay) return; }
+                catch { return; }
+            }
+
+            if (TryDequeueAlert(out string text, out string expression))
+            {
+                MelonCoroutines.Start(TriggerDialogCoroutine(text, expression));
+                _lastAlertRealTime = now;
             }
         }
 
@@ -423,13 +440,13 @@ namespace StockAlertMod
                     var vlg = buttonArea.GetComponent<UnityEngine.UI.VerticalLayoutGroup>();
                     if (vlg != null) vlg.enabled = false;
                     SetRect(root, "Button Area",                 960f, -615f, 390f, 280f);
-                    SetRect(buttonArea, "Buy title",               0f,  -65f, 125f, 43f);
-                    SetRect(buttonArea, "Buy Scrollbar",           0f, -102f, 395f, 18f);
-                    SetRect(buttonArea, "Buy Button",              0f, -125f, 400f, 63f);
-                    SetRect(buttonArea, "Sell title",             425f,  -70f, 120f, 28f);
-                    SetRect(buttonArea, "Sell Scrollbar",           0f, -102f, 395f, 18f);
-                    SetRect(buttonArea, "Sell Button",            415f, -100f, 192f, 88f);
-                    SetRect(buttonArea, "Sell All Button",        610f, -100f, 257f, 88f);
+                    SetRect(buttonArea, "Buy title",               5f,  -90f, 125f, 43f);
+                    SetRect(buttonArea, "Buy Scrollbar",           0f, -127f, 405f, 18f);
+                    SetRect(buttonArea, "Buy Button",              0f, -150f, 400f, 93f);
+                    SetRect(buttonArea, "Sell title",             425f,  -90f, 120f, 28f);
+                    SetRect(buttonArea, "Sell Scrollbar",         415f, -127f, 435f, 18f);
+                    SetRect(buttonArea, "Sell Button",            415f, -150f, 207f, 93f);
+                    SetRect(buttonArea, "Sell All Button",        625f, -150f, 232f, 93f);
                 }
             }
             catch (Exception ex)
@@ -684,38 +701,39 @@ namespace StockAlertMod
                             alertLevel[name] = newLevel;
                         }
 
-                        if (prefLossAlertsEnabled?.Value == false) goto SkipLoss;
-                        int newLossLevel = 0;
-                        for (int t = 0; t < LossThresholds.Length; t++)
+                        if (prefLossAlertsEnabled?.Value != false)
                         {
-                            if (-pct >= LossThresholds[t]) newLossLevel = t + 1;
-                            else break;
-                        }
-
-                        int curLossLevel = lossLevel.GetOrAdd(name, 0);
-
-                        if (newLossLevel > curLossLevel)
-                        {
-                            lossLevel[name] = newLossLevel;
-
-                            float cooldownUntil = stockCooldowns.GetOrAdd(name, 0f);
-                            if (now >= cooldownUntil)
+                            int newLossLevel = 0;
+                            for (int t = 0; t < LossThresholds.Length; t++)
                             {
-                                stockCooldowns[name] = now + ALERT_COOLDOWN;
+                                if (-pct >= LossThresholds[t]) newLossLevel = t + 1;
+                                else break;
+                            }
 
-                                int lossPct = (int)(-pct * 100f);
-                                int sympathyL = 0; float moodL = 0.5f;
-                                try { var vars = Il2Cpp.GameScript.Instance?.GameVariables; if (vars != null) { sympathyL = vars.sympathy; moodL = vars.Mood; } } catch { }
-                                string msg = GetLine("loss", sympathyL, moodL, name, 0, lossPct);
-                                string lossExpr = lossPct >= 50 ? "VerySad" : "Sad";
-                                tickAlerts.Add((1000 + lossPct, msg, lossExpr));
+                            int curLossLevel = lossLevel.GetOrAdd(name, 0);
+
+                            if (newLossLevel > curLossLevel)
+                            {
+                                lossLevel[name] = newLossLevel;
+
+                                float cooldownUntil = stockCooldowns.GetOrAdd(name, 0f);
+                                if (now >= cooldownUntil)
+                                {
+                                    stockCooldowns[name] = now + ALERT_COOLDOWN;
+
+                                    int lossPct = (int)(-pct * 100f);
+                                    int sympathyL = 0; float moodL = 0.5f;
+                                    try { var vars = Il2Cpp.GameScript.Instance?.GameVariables; if (vars != null) { sympathyL = vars.sympathy; moodL = vars.Mood; } } catch { }
+                                    string msg = GetLine("loss", sympathyL, moodL, name, 0, lossPct);
+                                    string lossExpr = lossPct >= 50 ? "VerySad" : "Sad";
+                                    tickAlerts.Add((1000 + lossPct, msg, lossExpr));
+                                }
+                            }
+                            else if (newLossLevel < curLossLevel)
+                            {
+                                lossLevel[name] = newLossLevel;
                             }
                         }
-                        else if (newLossLevel < curLossLevel)
-                        {
-                            lossLevel[name] = newLossLevel;
-                        }
-                        SkipLoss:
 
                         bool athEnabled = prefAthAlertsEnabled?.Value != false;
                         bool atlEnabled = prefAtlAlertsEnabled?.Value != false;
@@ -1254,6 +1272,16 @@ namespace StockAlertMod
             static void Postfix()
             {
                 GameStateTracker.SetSleeping(false);
+            }
+        }
+
+
+        [HarmonyPatch(typeof(Il2Cpp.GameVariables), "MinutePassed")]
+        static class GameVariablesMinutePassedPatch
+        {
+            static void Postfix(bool suppressEvents)
+            {
+                if (!suppressEvents) ActivateTheDialogue();
             }
         }
     }
