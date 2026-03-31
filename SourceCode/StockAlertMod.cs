@@ -22,6 +22,9 @@ namespace StockAlertMod
         private static string currentStateName = "Unknown";
         private static bool isSleeping = false;
 
+        // Suppress alerts for 10s after returning to RoomState (sleep, PC, outside, etc.)
+        private static float _transitionCooldownUntil = 0f;
+
         public static bool IsSleeping => isSleeping;
 
         public static void SetSleeping(bool sleeping)
@@ -44,6 +47,9 @@ namespace StockAlertMod
 
                 if (name != currentStateName)
                 {
+                    if (name == "RoomState" && currentStateName == "Other")
+                        _transitionCooldownUntil = UnityEngine.Time.realtimeSinceStartup + 10f;
+
                     currentStateName = name;
                 }
             }
@@ -53,6 +59,7 @@ namespace StockAlertMod
         public static bool IsSafeToTrigger()
         {
             if (isSleeping) return false;
+            if (UnityEngine.Time.realtimeSinceStartup < _transitionCooldownUntil) return false;
             return currentStateName == "RoomState" || currentStateName == "Unknown";
         }
     }

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- ========== CHANGE THIS TO YOUR GAME INSTALL DIRECTORY ========== -->
-    <GameDir>CHANGE_ME</GameDir>
+    <GameDir>C:\Users\Pol\Desktop\ProjectMod\factorial-omega-win-64</GameDir>
     <!-- ================================================================ -->
 
     <TargetFramework>net6.0</TargetFramework>
