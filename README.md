@@ -115,6 +115,6 @@ Open the **Mod Settings Menu** in-game to configure:
 ## Credits
 
 Made by **PunPun**
-Special Thanks to MrEcho for allowing me to utilize MSM for my mod.
-Special Thanks to Ivory61 for recommending tools used in development.
-Special Thanks to Sheep for giving information about code.
+Special Thanks to **MrEcho** for allowing me to utilize MSM for my mod.
+Special Thanks to **Ivory61** for recommending tools used in development.
+Special Thanks to **Sheep** for giving information about code.
